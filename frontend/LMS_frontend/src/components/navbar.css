@@ -1,0 +1,93 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+
+.navbar{
+  display : flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 10%;
+  background-color: rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  border-bottom: 1px solid #eaeaea;
+  font-family: 'Inter',sans-serif;
+}
+
+.navbar-logo{
+  font-size: 1.5rem;
+  letter-spacing: -1px;
+  color: #2563eb;
+  cursor: pointer;
+}
+
+
+.navbar-links{
+  display: flex;
+  list-style: none;
+  gap: 2.5rem;
+}
+
+.navbar-links a {
+  text-decoration: none;
+  color: #4b5563;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: color 0.2s ease;
+}
+
+.navbar-links a:hover{
+  color: #2563eb;
+}
+
+.navbar-auth{
+  display: flex;
+  align-items: center;
+}
+
+.user-section{
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-email{
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.logout-btn , .login-btn{
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+
+.logout-btn{
+  background-color: #fef2f2;
+  color:#dc2626;
+  border:1px solid #fecaca;
+}
+.logout-btn:hover{
+  background-color: #fee2e2;
+}
+
+.login-btn{
+  background-color: #2563eb;
+  color: white;
+  box-shadow: 0 4px 6px rgba(37,99,235,0.2);
+}
+
+.login-btn:hover{
+  background-color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+
+
