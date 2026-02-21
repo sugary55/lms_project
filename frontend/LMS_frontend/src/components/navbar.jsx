@@ -5,7 +5,7 @@ const Navbar = ({User, handleLogout,handleLogin})=>{
   return (
     <nav className="navbar">
       <div className="navbar-logo" >
-        <strong>lms.edu</strong>
+        <strong>DR.Mina academy</strong>
       </div>
       <ul className="navbar-links">
         <li><a href="#courses">courses</a></li>
