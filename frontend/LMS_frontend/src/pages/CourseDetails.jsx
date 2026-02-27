@@ -1,20 +1,22 @@
 import React ,{useEffect,useState} from 'react';
 import {useParams , useNavigate} from 'react-router-dom';
+import axios from "axios";
 
-
-const CourseDetails = () => {
+const CourseDetails = ({user}) => {
   const {id} = useParams();
   const navigate = useNavigate();
   const [course, setCourse]= useState(null);
   const [loading, setLoading]= useState(true);
   const [expandedSections, setExpandedSections]= useState({});
+  const [isEnrolled,setIsEnrolled]=useState(false);
+  const [checkingEnrollment,setCheckingEnrollment]=useState(true);
 
   useEffect(()=>{
     const fetchCourse = async()=>{
       try{
-        //ifusing router with ID param
-        const response = await fetch(`http://localhost:8000/api/course/${id}`);
-        //if no router yet , use a hardcoded ID or pass as prop 
+        
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/course/${id}`);
+         
         const data = await response.json();
         setCourse(data);
       }catch(error){
@@ -25,6 +27,29 @@ const CourseDetails = () => {
     };
     fetchCourse();
   },[id]);
+
+useEffect(()=>{
+  const checkEnrollment = async()=>{
+    if(!user || !course){setCheckingEnrollment(false); return;}
+    try{
+      // You'll need an API endpoint to check enrollment
+        // For now, we'll use a simple approach - fetch user's enrolled courses
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/user/${user.id}/enrolled-courses`);
+
+      if(response.data && Array.isArray(response.data)){
+        const enrolledCoursesIds = response.data.map(c => c._id);
+      setIsEnrolled(enrolledCoursesIds.includes(course._id));
+      }
+     
+    }catch(error){
+      console.error('Error checking enrollment ',error);
+    }finally{
+      setCheckingEnrollment(false);
+    }
+  };
+  checkEnrollment();
+},[user,course]);
+
   const toggleSection = (index)=>{
     setExpandedSections(prev=>({
       ...prev,
@@ -34,6 +59,20 @@ const CourseDetails = () => {
   if(loading) return <div className="text-center mt-20">loading... </div>;
   if(!course)return <div className="text-center mt-20">course not found</div>;
 
+  const handleEnroll = async()=>{
+    if(!user){alert("please log in for enrollment");return;}  
+    setLoading(true);
+    try{
+       await axios.post(`${import.meta.env.VITE_API_URL}/api/user/enroll`,
+        {userId: user.id , courseId:course._id}
+      );
+      setIsEnrolled(true);
+      alert(`enrolled successfully`);
+    }catch(error){
+      alert(error.response?.data?.message || "erollment failed");
+    }finally{setLoading(false);}
+  };
+
   return(
     <div className="max-w-4xl mx-auto px-6 py-12 text-left">
         <button onClick={()=>navigate('/')} className="flex items-center gap-2 text-blue-600 font-semibold mb-6 hover:text-blue-800 transition-colors">
@@ -42,6 +81,7 @@ const CourseDetails = () => {
         </svg>
         back
         </button>
+
        {/* Course Header */}
        <div className="mb-8">
         <div className="flex items-center gap-4 mb-4">
@@ -59,10 +99,21 @@ const CourseDetails = () => {
 
        {/* Enroll Button */}
        <div className="mb-12">
-             <button className="w-full md:w-auto bg-blue-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-blue-700 transition shadow-lg">
-          Enroll Now - ${course.price}
-        </button>
-       </div>
+        {checkingEnrollment ?(
+            <div className="text-gray-500 animate-pulse">Checking status...</div>
+        ): isEnrolled ? (
+          <div className="w-full md:w-auto bg-green-100 text-green-700 px-8 py-4 rounded-xl text-lg font-semibold text-center border-2 border-green-200">
+                ✓ You're enrolled in this course
+          </div>
+        ):(
+          <button onClick={handleEnroll}
+           disabled={loading} 
+           className="w-full md:w-auto bg-blue-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-blue-700 transition shadow-lg disabled:bg-gray-400">
+            {loading ? "Processing..." : `Enroll Now - $${course.price}`}
+          </button>
+          
+        )}</div>
+
 
 
        {/* Course Content */}

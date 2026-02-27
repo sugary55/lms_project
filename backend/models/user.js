@@ -20,6 +20,15 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     description: "User's email (from Supabase)"
   },
+  role:{
+    type: String,
+    enum:['student','admin'],
+    default: 'student'
+  },
+  enrolledCourses:[{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Course'
+  }],
   created_at: {
     type: Date,
     default: Date.now,
