@@ -1,172 +1,213 @@
-import React ,{useEffect,useState} from 'react';
-import {useParams , useNavigate} from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from "axios";
+import { 
+  Container, Grid, Typography, Button, Box, Chip, 
+  Accordion, AccordionSummary, AccordionDetails, 
+  List, ListItem, ListItemIcon, ListItemText, 
+  CircularProgress, Divider, Paper, Stack 
+} from '@mui/material';
+import { 
+  ExpandMore, Lock, PlayCircle, ArrowBack, 
+  CheckCircle, Description, Videocam, LiveTv, Assignment 
+} from '@mui/icons-material';
 
-const CourseDetails = ({user}) => {
-  const {id} = useParams();
+const CourseDetails = ({ user }) => {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [course, setCourse]= useState(null);
-  const [loading, setLoading]= useState(true);
-  const [expandedSections, setExpandedSections]= useState({});
-  const [isEnrolled,setIsEnrolled]=useState(false);
-  const [checkingEnrollment,setCheckingEnrollment]=useState(true);
+  const [course, setCourse] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [checkingEnrollment, setCheckingEnrollment] = useState(true);
 
-  useEffect(()=>{
-    const fetchCourse = async()=>{
-      try{
-        
+  // Map content types to icons
+  const getIcon = (type) => {
+    switch (type) {
+      case 'video': return <Videocam fontSize="small" />;
+      case 'pdf': return <Description fontSize="small" />;
+      case 'live': return <LiveTv fontSize="small" />;
+      case 'exam': return <Assignment fontSize="small" />;
+      default: return <PlayCircle fontSize="small" />;
+    }
+  };
+
+  useEffect(() => {
+    const fetchCourse = async () => {
+      try {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/course/${id}`);
-         
         const data = await response.json();
         setCourse(data);
-      }catch(error){
-        console.error('Error fetching course:',error);
-      }finally{
+      } catch (error) {
+        console.error('Error fetching course:', error);
+      } finally {
         setLoading(false);
       }
     };
     fetchCourse();
-  },[id]);
+  }, [id]);
 
-useEffect(()=>{
-  const checkEnrollment = async()=>{
-    if(!user || !course){setCheckingEnrollment(false); return;}
-    try{
-      // You'll need an API endpoint to check enrollment
-        // For now, we'll use a simple approach - fetch user's enrolled courses
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/user/${user.id}/enrolled-courses`);
-
-      if(response.data && Array.isArray(response.data)){
-        const enrolledCoursesIds = response.data.map(c => c._id);
-      setIsEnrolled(enrolledCoursesIds.includes(course._id));
+  useEffect(() => {
+    const checkEnrollment = async () => {
+      if (!user || !course) { setCheckingEnrollment(false); return; }
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/user/${user.id}/enrolled-courses`);
+        if (response.data && Array.isArray(response.data)) {
+          const enrolledIds = response.data.map(c => c._id);
+          setIsEnrolled(enrolledIds.includes(course._id));
+        }
+      } catch (error) {
+        console.error('Enrollment check failed', error);
+      } finally {
+        setCheckingEnrollment(false);
       }
-     
-    }catch(error){
-      console.error('Error checking enrollment ',error);
-    }finally{
-      setCheckingEnrollment(false);
+    };
+    checkEnrollment();
+  }, [user, course]);
+
+  const handleEnroll = async () => {
+    setLoading(true);
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/user/enroll`, {
+        userId: user.id,
+        courseId: course.course_ID
+      });
+      setIsEnrolled(true);
+    } catch (error) {
+      alert(error.response?.data?.message || "Enrollment failed");
+    } finally {
+      setLoading(false);
     }
   };
-  checkEnrollment();
-},[user,course]);
 
-  const toggleSection = (index)=>{
-    setExpandedSections(prev=>({
-      ...prev,
-      [index]: !prev[index]
-    }));
-  };
-  if(loading) return <div className="text-center mt-20">loading... </div>;
-  if(!course)return <div className="text-center mt-20">course not found</div>;
+  if (loading) return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>
+  );
 
-  const handleEnroll = async()=>{
-    if(!user){alert("please log in for enrollment");return;}  
-    setLoading(true);
-    try{
-       await axios.post(`${import.meta.env.VITE_API_URL}/api/user/enroll`,
-        {userId: user.id , courseId:course._id}
-      );
-      setIsEnrolled(true);
-      alert(`enrolled successfully`);
-    }catch(error){
-      alert(error.response?.data?.message || "erollment failed");
-    }finally{setLoading(false);}
-  };
+  if (!course) return (
+    <Container sx={{ mt: 10, textAlign: 'center' }}>
+      <Typography variant="h5">Course not found</Typography>
+      <Button onClick={() => navigate('/')}>Return Home</Button>
+    </Container>
+  );
 
-  return(
-    <div className="max-w-4xl mx-auto px-6 py-12 text-left">
-        <button onClick={()=>navigate('/')} className="flex items-center gap-2 text-blue-600 font-semibold mb-6 hover:text-blue-800 transition-colors">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-        back
-        </button>
+  return (
+    <Container maxWidth="lg" sx={{ py: 6 }}>
+      {/* Back Button */}
+      <Button 
+        startIcon={<ArrowBack />} 
+        onClick={() => navigate('/')} 
+        sx={{ mb: 4, fontWeight: 'bold' }}
+      >
+        Back to Gallery
+      </Button>
 
-       {/* Course Header */}
-       <div className="mb-8">
-        <div className="flex items-center gap-4 mb-4">
-<span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
-            {course.course_ID}
-          </span>
-          <span className="text-2xl font-bold text-blue-600">${course.price}</span>
-        </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">{course.title}</h1>
-           <p className="text-gray-600 text-lg">
-          {course.description || "No description available."}
-        </p>
-       </div>
+      <Grid container spacing={5}>
+        {/* LEFT COLUMN: Course Info & Curriculum */}
+        <Grid  size={{ xs: 12 , md:8 }} >
+          <Stack spacing={3}>
+            <Box>
+              <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                <Chip label={course.course_ID} color="primary" sx={{ fontWeight: 'bold' }} />
+                <Chip label={course.category} variant="outlined" />
+              </Stack>
+              <Typography variant="h3" fontWeight="900" gutterBottom>
+                {course.title}
+              </Typography>
+              <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400 }}>
+                {course.description || "Learn the fundamentals and advanced techniques in this comprehensive curriculum."}
+              </Typography>
+            </Box>
 
+            <Divider />
 
-       {/* Enroll Button */}
-       <div className="mb-12">
-        {checkingEnrollment ?(
-            <div className="text-gray-500 animate-pulse">Checking status...</div>
-        ): isEnrolled ? (
-          <div className="w-full md:w-auto bg-green-100 text-green-700 px-8 py-4 rounded-xl text-lg font-semibold text-center border-2 border-green-200">
-                ✓ You're enrolled in this course
-          </div>
-        ):(
-          <button onClick={handleEnroll}
-           disabled={loading} 
-           className="w-full md:w-auto bg-blue-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-blue-700 transition shadow-lg disabled:bg-gray-400">
-            {loading ? "Processing..." : `Enroll Now - $${course.price}`}
-          </button>
-          
-        )}</div>
+            <Box>
+              <Typography variant="h5" fontWeight="800" sx={{ mb: 3 }}>
+                Course Content
+              </Typography>
+              
+              {course.sections?.map((section, idx) => (
+                <Accordion key={idx} elevation={0} sx={{ border: '1px solid #eee', mb: 1, '&:before': { display: 'none' } }}>
+                  <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography fontWeight="700">{section.title}</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ p: 0 }}>
+                    <List disablePadding>
+                      {section.lessons?.map((lesson, lIdx) => (
+                        <ListItem key={lIdx} divider sx={{ py: 1.5 }}>
+                          <ListItemIcon sx={{ minWidth: 40 }}>
+                            {lesson.isLocked ? <Lock color="disabled" fontSize="small" /> : <CheckCircle color="success" fontSize="small" />}
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary={lesson.lessonTitle} 
+                            secondary={lesson.contentType.toUpperCase()} 
+                            primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                          />
+                          <Box sx={{ color: 'text.secondary' }}>
+                            {getIcon(lesson.contentType)}
+                          </Box>
+                        </ListItem>
+                      ))}
+                    </List>
+                  </AccordionDetails>
+                </Accordion>
+              ))}
+            </Box>
+          </Stack>
+        </Grid>
 
+        {/* RIGHT COLUMN: Enrollment Card (Sticky) */}
+        <Grid  size={{ xs: 12 , md:4}}>
+          <Paper 
+            elevation={0} 
+            sx={{ 
+              p: 4, 
+              borderRadius: 4, 
+              border: '1px solid #eef2f6', 
+              position: 'sticky', 
+              top: 100,
+              textAlign: 'center'
+            }}
+          >
+            <Typography variant="h4" fontWeight="900" color="primary" gutterBottom>
+              {course.price} EGP
+            </Typography>
+            
+            <Box sx={{ my: 3 }}>
+              {checkingEnrollment ? (
+                <CircularProgress size={24} />
+              ) : isEnrolled ? (
+                <Button 
+                  fullWidth 
+                  variant="contained" 
+                  color="success" 
+                  size="large" 
+                  startIcon={<CheckCircle />}
+                  sx={{ borderRadius: 3, py: 1.5, fontWeight: 'bold' }}
+                >
+                  Access Content
+                </Button>
+              ) : (
+                <Button 
+                  fullWidth 
+                  variant="contained" 
+                  size="large" 
+                  onClick={handleEnroll}
+                  disabled={loading}
+                  sx={{ borderRadius: 3, py: 1.5, fontWeight: 'bold' }}
+                >
+                  {loading ? "Processing..." : "Enroll Now"}
+                </Button>
+              )}
+            </Box>
 
-
-       {/* Course Content */}
-       <div className="border-t border-gray-200 pt-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Course Content</h2>
-
-          {course.sections?.map((section,idx)=>(
-            <div key={idx} className="mb-4 border border-gray-200 rounded-lg overflow-hidden">
-                  {/* Section Header */}
-                  <button
-              onClick={() => toggleSection(idx)}
-              className="w-full flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100 transition"
-            >
-              <span className="font-semibold text-gray-800">{section.title}</span>
-              <svg
-                className={`w-5 h-5 transform transition-transform ${expandedSections[idx] ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {/*lessons - fixed: now properly maps through lesson */}
-            {expandedSections[idx] && (
-              <div className="divide-y divide-gray-100">
-                {section.lessons?.map((lesson,lessonIdx)=>(
-                  <div  key={lessonIdx} className='p-4 flex items-center justify-between hover:bg-gray-50'>
-                    <div className="flex items-center gap-3">
-                      {lesson.isLocked ?(
-                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
-                       ):(
-                         <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                       )}
-                        <span className="text-gray-700">{lesson.lessonTitle}</span>
-                    </div>
-                    <span className="text-sm text-gray-500 capitalize">{lesson.contentType}
-                    </span>
-                  </div>
-                ))}
-                </div>
-            )}  
-              </div>
-            ))}
-            </div>
-       </div>
-
+            <Typography variant="caption" color="text.secondary">
+              Lifetime access • Certificate of completion • Practical exercises
+            </Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Container>
   );
 };
 
-
-export default CourseDetails
+export default CourseDetails;

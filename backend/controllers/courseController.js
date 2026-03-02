@@ -46,6 +46,7 @@ export const getAllCourses = async(req,res,next)=>{
 
 export const getCourseByID = async(req,res,next)=>{
   try{
+    console.log("Searching for ID:", req.params.id);
     const course = await Course.findOne({course_ID:req.params.id.toUpperCase()});
 
     if(!course){
@@ -78,7 +79,7 @@ export const updateCourse = async (req,res,next)=>{
     }
     res.status(200).json(updatedCourse);
   }catch(error){
-    if(error.name === 'Validation Error'){
+    if(error.name === 'ValidationError'){
       error.statusCode=400;
     }
     next(error);
@@ -86,7 +87,25 @@ export const updateCourse = async (req,res,next)=>{
 }
 
 
-//5.add sections to the course this is the array were we store the lessons 
+//5.delete course
+export const deleteCourse = async (req,res,next) =>{
+try{
+  const {id}=req.params;
+  const deletedCourse = await Course.findOneAndDelete({course_ID: id.toUpperCase()});
+  if (!deletedCourse) {
+      const error = new Error("Course not found");
+      error.statusCode = 404;
+      return next(error);
+    }
+  res.status(200).json({message:"course deleted successfully"});
+
+}catch(error){
+  next(error);
+}
+}
+
+
+//6.add sections to the course this is the array were we store the lessons 
 export const addSection = async(req,res,next)=>{
   try{
     const {id} = req.params;
@@ -110,7 +129,7 @@ export const addSection = async(req,res,next)=>{
 };
 
 
-//6.add lessons
+//7.add lessons
 //thi is where we store the lessons in the sections array in database 
 //we use supabase storge and only store the url in mongo 
 
@@ -135,3 +154,26 @@ export const addLessons = async(req,res,next)=>{
     next(error);
   }
 }
+
+
+
+//8.toggle is featured controllerfor admin dashboard button
+
+export const toggleFeatured = async (req,res,next) =>{
+  try{
+    const{id}=req.params;
+    const course = await Course.findOne({course_ID:id.toUpperCase()});
+
+    if(!course){
+      return res.status(404).json({message:"course not found" , success:false});
+    }
+    course.isFeatured = !course.isFeatured;
+    await course.save();
+
+    res.status(200).json({
+      message:`course is now ${course.isFeatured ? 'featured' : 'regular'}`,isFeatured:course.isFeatured
+    });
+  }catch(error){
+    next(error);
+  }
+};

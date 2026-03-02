@@ -24,7 +24,7 @@ export const validateUserSync =(req,res,next)=>{
 export const validateEnrollment = (req,res,next)=>{
   const enrollmentSchema = z.object({
     userId:z.string().min(1,"user ID is required"),
-    courseId:z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Course ID format"),
+    courseId: z.string().length(4, "Course ID must be exactly 4 characters").toUpperCase(),
   });
 
   try{
@@ -46,11 +46,13 @@ export const validateCourse = (req,res,next)=>{
     title: z.string().min(5,"title must be atleast 5 chars"),
     description: z.string().min(10,"description is too short"),
     price:z.coerce.number().nonnegative("price can not be negative"),
-    instructor:z.string().min(2,"instructor name is required"),
+    instructor:z.string().min(2,"instructor name is required").optional().default("Admin"),
     category:z.enum(["TOEFL", "IELTS", "GENERAL"],{
       errorMap:()=>({message:"please select a valid category"})
     }),
-    subCategory: z.enum(['GRAMMER','Speaking','Exams','Revision'],{errorMap:()=>({message:"select a valid sub-category"})}),
+    subCategory: z.enum(['GRAMMAR','Speaking','Exams','Revision'],
+      {errorMap:()=>({message:"select a valid sub-category"})
+    }),
     course_ID: z.string().length(4,"course Id must be 4 char exactly").toUpperCase(),
   });
   try{

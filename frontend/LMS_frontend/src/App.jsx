@@ -1,101 +1,146 @@
-import React, { useEffect , useState} from 'react';
+import React, { useEffect, useState } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Container, Box, Typography, Button, Divider, CircularProgress } from '@mui/material';
+import { LockOutlined } from '@mui/icons-material';
+
+// Components & Pages
 import Navbar from './components/navbar';
-import HeroSection  from './components/herosection';
+import HeroSection from './components/herosection';
 import Courses from './pages/Course';
 import CourseDetails from './pages/CourseDetails';
-import {supabase} from './library/supabaseClient';
-import { syncUserWithMongoDb} from './library/api';
-import { Routes , Route } from 'react-router-dom';
+import AdminDashboard from './pages/AdminDashboard';
+import AboutUs from './pages/AboutUs';
 
+// Library
+import { supabase } from './library/supabaseClient';
+import { syncUserWithMongoDb } from './library/syncDB';
 
-function App(){
-  const [User,setUser]=useState(null);
+function App() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(()=>{
-    //1.check for an existing session on load
-    const checkUser = async()=>{
-      const {data :{session}} = await supabase.auth.getSession();
-      if(session) setUser(session.user);
+  useEffect(() => {
+    // 1. Check existing session
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) setUser(session.user);
+      setLoading(false);
     };
     checkUser();
 
-
-    //2. listen for login/logout events
-    const {data : {subscription}} = supabase.auth.onAuthStateChange(async (event,session)=>{
-      if((event === 'SIGNED_IN'|| event === 'INITIAL_SESSION') && session)
-        {
+    // 2. Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
         setUser(session.user);
         await syncUserWithMongoDb(session.user);
-      }else if(event === 'SIGNED_OUT'){
+      } else if (event === 'SIGNED_OUT') {
         setUser(null);
       }
     });
-    return ()=> subscription.unsubscribe();},[]);
 
-    const handleLogout = async ()=>{
-      await supabase.auth.signOut();
-    };
+    return () => subscription.unsubscribe();
+  }, []);
 
-    //only one return block for any component
-      return(
-        <div className='App'>
-          <Navbar
-            User={User}
-            handleLogout={handleLogout}
-            handleLogin={() => supabase.auth.signInWithOAuth({
-              provider:'google',
-              options:{queryParams:{prompt:'select_account'}}
-            })}
-          />
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
-          <Routes>
-            {/*route1:homepage*/}
-            <Route path='/' element={
-              <>
-                <HeroSection User={User}/>
-                <main style={{padding:'20px'}}>
-                  <section style={{textAlign:"center",margin:"40px 0"}}>
-                    {User? (
-                      <div>
-                <h1 className="text-2xl font-bold text-blue-600">welcome back,{User.user_metadata?.full_name || User.email}!
-                </h1>
-              </div>
-                    ):(
-                      <h1 className="text-2xl font-bold">start your journey today </h1>
-                   )}
-                 </section>
-            {/* 3.the course gallery  */}
-            <hr className="my-10 border-gray-100" />
-            <Courses/>
-          </main>
-        </>
-      }/>
-      {/*route2:course details page*/}
-      <Route path='/course/:id' element={
-        User ? (
-          <CourseDetails user={User}/>
-        ):(
-          <div className="max-w-4xl mx-auto px-6 py-12 text-center">
-            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-12">
-              <svg className="w-20 h-20 text-blue-500 mx-auto mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-                <h1 className="text-3xl font-bold text-gray-900 mb-4">Login Required</h1>
-                <p className="text-lg text-gray-600 mb-8">
-                  Please sign in to view course details, syllabus, and enroll.
-                </p>
-                <button 
-                  onClick={() => supabase.auth.signInWithOAuth({ provider: 'google' })}
-                  className="bg-blue-600 text-white px-8 py-3 rounded-xl text-lg font-semibold hover:bg-blue-700 transition shadow-lg">
-                  Sign In with Google
-                </button>
-            </div>
-          </div>
-        )
-      }/>
-    </Routes>
-  </div>
+  const handleLogin = () => {
+    supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { queryParams: { prompt: 'select_account' } }
+    });
+  };
+
+  if (loading) return (
+    <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
+      <CircularProgress />
+    </Box>
   );
-};
+
+  return (
+    <Box sx={{ minHeight: '100vh', bgcolor: 'white' }}>
+      <Navbar User={user} handleLogout={handleLogout} handleLogin={handleLogin} />
+
+      <Routes>
+        {/* --- HOMEPAGE --- */}
+        <Route path='/' element={
+          <>
+            <HeroSection User={user} />
+            <Container maxWidth="lg" sx={{ py: 8 }}>
+              <Box sx={{ textAlign: 'center', mb: 8 }}>
+                {user ? (
+                  <Typography variant="h4" fontWeight="800" color="primary">
+                    Welcome back, {user.user_metadata?.full_name || user.email.split('@')[0]}!
+                  </Typography>
+                ) : (
+                  <Typography variant="h4" fontWeight="800" color="text.primary">
+                    Start Your Journey Today
+                  </Typography>
+                )}
+                <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+                  Explore our premium curriculum designed for academic excellence.
+                </Typography>
+              </Box>
+
+              <Divider sx={{ mb: 8, opacity: 0.6 }} />
+              
+              <Courses />
+            </Container>
+          </>
+        } />
+
+        {/* --- ABOUT US --- */}
+        <Route path="/about" element={<AboutUs />} />
+
+        {/* --- ADMIN DASHBOARD --- */}
+        <Route path='/admin' element={<AdminDashboard />} />
+
+        {/* --- COURSE DETAILS (Protected) --- */}
+        <Route path='/course/:id' element={
+          user ? (
+            <CourseDetails user={user} />
+          ) : (
+            <LoginRequiredView handleLogin={handleLogin} />
+          )
+        } />
+        
+        {/* 404 Redirect */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Box>
+  );
+}
+
+/**
+ * A clean, dedicated view for non-authenticated users trying to access details
+ */
+const LoginRequiredView = ({ handleLogin }) => (
+  <Container maxWidth="sm" sx={{ py: 15, textAlign: 'center' }}>
+    <Box sx={{ 
+      p: 6, 
+      bgcolor: '#f8faff', 
+      borderRadius: 8, 
+      border: '1px dashed', 
+      borderColor: 'primary.light' 
+    }}>
+      <LockOutlined sx={{ fontSize: 60, color: 'primary.main', mb: 3 }} />
+      <Typography variant="h4" fontWeight="900" gutterBottom>
+        Login Required
+      </Typography>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+        Please sign in to view the full course syllabus, lesson materials, and enrollment options.
+      </Typography>
+      <Button 
+        variant="contained" 
+        size="large" 
+        onClick={handleLogin}
+        sx={{ borderRadius: 3, px: 4, py: 1.5, fontWeight: 'bold' }}
+      >
+        Sign In with Google
+      </Button>
+    </Box>
+  </Container>
+);
 
 export default App;

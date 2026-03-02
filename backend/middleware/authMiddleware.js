@@ -4,6 +4,7 @@
 import User from '../models/user.js';
 
 export const isAdmin = async (req,res,next)=>{
+  console.log("Headers received:", req.headers['x-user-id']);
   try{
     const supabaseId = req.headers['x-user-id'];
     if(!supabaseId){

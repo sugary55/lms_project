@@ -1,4 +1,8 @@
 import User from '../models/user.js';
+import Course from '../models/course.js';
+
+
+
 //1.sync user (supabase auth login/signup)
 export const syncUser = async(req,res,next)=>{
   try{
@@ -14,7 +18,7 @@ export const syncUser = async(req,res,next)=>{
     res.status(200).json({
       success:true,
       message:"user synced successfully",
-      user:{id:user._id,name:user.name,email:user.emil}
+      user:{id:user._id,name:user.name,email:user.email}
     });
   }catch(error){
     next(error);//global error handler
@@ -42,14 +46,30 @@ export const getEnrolledCourses = async(req,res,next)=>{
 export const enrollInCourse = async(req,res,next)=>{
   try{
     const {userId,courseId} = req.body;
-    //verfiy course exist
-    const user = await User.findOneAndUpdate(
-      {supabase_id:userId},
-      {$addToSet:{enrolledCourses:courseId}},
-      {new:true}
-    );
+
+    const courseDoc = await Course.findOne({ course_ID: courseId.toUpperCase() });
+
+    //verify course exist
+    if (!courseDoc) {
+      const error = new Error('course not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+    // 2. Add course to User AND Increment the course counter
+   const [updatedUser] = await Promise.all([
+      User.findOneAndUpdate(
+        { supabase_id: userId },
+        { $addToSet: { enrolledCourses: courseDoc._id } },
+        { new: true }
+      ),
+      Course.findByIdAndUpdate(
+        courseDoc._id,
+        { $inc: { enrollmentCount: 1 } },
+        { new: true } // This adds +1 to the count
+      )
+    ]);
     
-    if(!user){
+    if(!updatedUser){
       const error = new error('enrollment failed: user not found');
       error.statusCode=404;
       return next(error);
@@ -58,7 +78,7 @@ export const enrollInCourse = async(req,res,next)=>{
     res.status(200).json({
       success:true,
       message:"enrollment successfull",
-      enrolledCount:user.enrolledCourses.length
+      enrolledCount:updatedUser.enrolledCourses.length
     })
 }catch(error){
   next(error);
